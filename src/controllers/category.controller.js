@@ -33,9 +33,23 @@ export const updateCategory = async (req, res) => {
 
 export const deleteCategory = async (req, res) => {
   try {
-    const deleted = await CategoryModel.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: "Categoría eliminada", category: deleted });
+    const { id } = req.params;
+
+    const category = await CategoryModel.findById(id);
+    if (!category)
+      return res.status(404).json({ message: "Categoría no encontrada" });
+
+    category.active = false;
+    await category.save();
+
+    // Desactivar eventos que usan esta categoría
+    await EventModel.updateMany(
+      { category: category._id },
+      { $set: { active: false } }
+    );
+
+    res.status(200).json({ message: "Categoría desactivada con cascada" });
   } catch (error) {
-    res.status(500).json({ message: "Error eliminando categoría", error });
+    res.status(500).json({ message: "Error al desactivar categoría", error });
   }
 };

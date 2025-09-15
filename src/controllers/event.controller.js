@@ -18,13 +18,27 @@ export const createEvent = async (req, res) => {
 
 export const getEvents = async (req, res) => {
   try {
-    const events = await EventModel.find()
+    const events = await EventModel.find({ active: true })
       .populate("organizer")
       .populate("attendees")
       .populate("category");
     res.status(200).json(events);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener eventos", error });
+  }
+};
+export const getEventById = async (req, res) => {
+  try {
+    const event = await EventModel.findById(req.params.id)
+      .populate("organizer")
+      .populate("attendees")
+      .populate("category");
+    if (!event) {
+      return res.status(404).json({ message: "Evento no encontrado" });
+    }
+    res.status(200).json(event);
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener evento", error });
   }
 };
 

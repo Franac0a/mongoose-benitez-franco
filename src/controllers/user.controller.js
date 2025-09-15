@@ -1,4 +1,5 @@
 import { UserModel } from "../models/user.model.js";
+import { EventModel } from "../models/event.model.js";
 
 export const createUser = async (req, res) => {
   try {
@@ -18,6 +19,18 @@ export const getUsers = async (req, res) => {
   }
 };
 
+export const getUserById = async (req, res) => {
+  try {
+    const user = await UserModel.findById(req.params.id).populate("events");
+    if (!user) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener usuario", error });
+  }
+};
+
 export const updateUser = async (req, res) => {
   try {
     const updated = await UserModel.findByIdAndUpdate(req.params.id, req.body, {
@@ -31,15 +44,30 @@ export const updateUser = async (req, res) => {
 
 export const deleteUser = async (req, res) => {
   try {
-    const deleted = await UserModel.findByIdAndUpdate(
-      req.params.id,
-      { active: false },
-      { new: true }
+    const { id } = req.params;
+
+    const user = await UserModel.findById(id);
+    if (!user)
+      return res.status(404).json({ message: "Usuario no encontrado" });
+
+    user.active = false;
+    await user.save();
+
+    // Desactivar eventos organizados por el usuario
+    await EventModel.updateMany(
+      { organizer: user._id },
+      { $set: { active: false } }
     );
-    res
-      .status(200)
-      .json({ message: "Usuario eliminado lógicamente", user: deleted });
+
+    // Eliminar al usuario del array de asistentes
+    await EventModel.updateMany(
+      { attendees: user._id },
+      { $pull: { attendees: user._id } }
+    );
+
+    res.status(200).json({ message: "Usuario desactivado con cascada" });
   } catch (error) {
-    res.status(500).json({ message: "Error al eliminar usuario", error });
+    console.error(error);
+    res.status(500).json({ message: "Error al desactivar usuario", error });
   }
 };
