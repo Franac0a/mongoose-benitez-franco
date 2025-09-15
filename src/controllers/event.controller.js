@@ -1,3 +1,4 @@
+import e from "express";
 import { EventModel } from "../models/event.model.js";
 import { UserModel } from "../models/user.model.js";
 
@@ -22,23 +23,40 @@ export const getEvents = async (req, res) => {
       .populate("organizer")
       .populate("attendees")
       .populate("category");
+    //para que no muestre asistentes inactivos
+    if (events.active === false) {
+      events.populate("");
+      events.populate("");
+      events.populate("category");
+      return res
+        .status(404)
+        .json({ message: "Evento no encontrado o inactivo" });
+    }
+
     res.status(200).json(events);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener eventos", error });
   }
 };
+
 export const getEventById = async (req, res) => {
   try {
-    const event = await EventModel.findById(req.params.id)
+    const event = await EventModel.findOne({ _id: req.params.id, active: true })
       .populate("organizer")
       .populate("attendees")
       .populate("category");
+
     if (!event) {
-      return res.status(404).json({ message: "Evento no encontrado" });
+      return res
+        .status(404)
+        .json({ message: "Evento no encontrado o inactivo" });
     }
+
     res.status(200).json(event);
   } catch (error) {
-    res.status(500).json({ message: "Error al obtener evento", error });
+    res
+      .status(500)
+      .json({ message: "Error al obtener evento", error: error.message });
   }
 };
 
@@ -69,6 +87,7 @@ export const deleteEvent = async (req, res) => {
     res.status(500).json({ message: "Error al eliminar evento", error });
   }
 };
+
 export const addAttendee = async (req, res) => {
   try {
     const { eventId, userId } = req.params;
@@ -126,6 +145,7 @@ export const removeAttendee = async (req, res) => {
       .status(200)
       .json({ message: "Usuario removido del evento", event, user });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Error al remover asistente", error });
   }
 };

@@ -1,4 +1,5 @@
 import { CategoryModel } from "../models/category.model.js";
+import { EventModel } from "../models/event.model.js";
 
 export const createCategory = async (req, res) => {
   try {
@@ -11,10 +12,34 @@ export const createCategory = async (req, res) => {
 
 export const getCategories = async (req, res) => {
   try {
-    const categories = await CategoryModel.find();
+    const categories = await CategoryModel.find({ active: true });
     res.status(200).json(categories);
   } catch (error) {
-    res.status(500).json({ message: "Error obteniendo categorías", error });
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "Error al obtener categorías", error: error.message });
+  }
+};
+
+export const getCategoryById = async (req, res) => {
+  try {
+    const category = await CategoryModel.findOne({
+      _id: req.params.id,
+      active: true,
+    });
+
+    if (!category) {
+      return res
+        .status(404)
+        .json({ message: "Categoría no encontrada o inactiva" });
+    }
+
+    res.status(200).json(category);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener categoría", error: error.message });
   }
 };
 
@@ -50,6 +75,7 @@ export const deleteCategory = async (req, res) => {
 
     res.status(200).json({ message: "Categoría desactivada con cascada" });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Error al desactivar categoría", error });
   }
 };
